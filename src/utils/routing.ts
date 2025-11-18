@@ -53,7 +53,7 @@ const createIntersections = (graph: IGraph, connectionDistance: number) => {
 
 export const buildGraphFromGeoJSON = (
     routeData: RoutesData, 
-    buildingData: BuildingData
+    _buildingData: BuildingData
 ): IGraphData => {
     
     const graph: IGraph = { nodes: [], edges: [], obstacleNodes: new Set() };
@@ -230,7 +230,7 @@ export const formatRouteResult = (
     // Instrucción de inicio
     instructions.push({
         type: 'start',
-        text: `Comienza a navegar hacia ${destinationName}`,
+        text: `Sigue la ruta podotactil hacia ${destinationName}`,
         distance: 0,
         node: routeNodes[0]
     });
@@ -239,7 +239,6 @@ export const formatRouteResult = (
     
     for (let i = 1; i < routeNodes.length; i++) {
         const currentNode = routeNodes[i];
-        const prevNode = routeNodes[i-1];
         
         let instructionText = "";
 

@@ -9,7 +9,7 @@ import { usePointsOfInterest } from "./hooks/usePointsOfInterest";
 import { calculateDistance } from "./utils/geometry";
 import { useGPS } from "./hooks/useGPS";
 import { SimulationProvider } from "./components/SimulationProvider";
-const IS_DEVELOPMENT = false
+const IS_DEVELOPMENT = false;
 export const App: React.FC = () => {
   // --- AHORA NECESITAMOS dispatch AQUÍ ---
   const { state, dispatch } = useAppContext();
@@ -18,7 +18,7 @@ export const App: React.FC = () => {
   const { speak, cancel } = useTTS();
   const currentInstructionIndex = useRef(0);
   const announcedPOIs = React.useRef(new Set<string>());
-  const { startTracking, stopTracking, error } = useGPS();
+  const { startTracking, stopTracking} = useGPS();
   const { pointsData: loadedPointsData } = usePointsOfInterest();
 
   // --- 1. REFERENCIAS PARA EL NUEVO SIMULADOR ---

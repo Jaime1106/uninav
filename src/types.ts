@@ -1,6 +1,6 @@
 // /src/types.ts
 // /src/types.ts
-import { Feature, FeatureCollection, Point, Polygon, LineString } from 'geojson'; // <-- Añade LineString aquí
+import { FeatureCollection, Point, Polygon, LineString } from 'geojson'; // <-- Añade LineString aquí
 
 // --- Estado y Configuración ---
 export interface IDijkstraResult {

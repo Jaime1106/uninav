@@ -7,7 +7,7 @@ import {
     formatRouteResult 
 } from '../utils/routing';
 import { findNearestNodes } from '../utils/geometry';
-import { BuildingData, RoutesData, IGraphData, Location, Destination } from '../types';
+import { BuildingData, RoutesData, IGraphData, Destination } from '../types';
 
 interface UseRoutingReturn {
     isRoutingLoading: boolean;
