@@ -26,13 +26,16 @@ export const App: React.FC = () => {
   const routeStepIndex = useRef(0);
 
 useEffect(() => {
-    const root = document.documentElement; // Esto es el tag <html>
+    const root = document.documentElement;
     if (settings.highContrastMode) {
-      root.classList.add('dark'); // Añade la clase .dark
+      root.classList.add('high-contrast');
+      root.classList.add('dark'); // Mantener dark como respaldo
     } else {
-      root.classList.remove('dark'); // Quita la clase .dark
+      root.classList.remove('high-contrast');
+      // No remover 'dark' aquí si quieres mantener el modo oscuro separado
     }
-  }, [settings.highContrastMode]);
+}, [settings.highContrastMode]);
+ 
   // Iniciar GPS (se ejecuta 1 vez)
   useEffect(() => {
     startTracking();

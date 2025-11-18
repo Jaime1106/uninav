@@ -6,3 +6,62 @@
   --color-primary-500: oklch(0.84 0.18 117.33);
   --spacing: 0.25rem;
 }
+
+/* === ESTILOS DE ALTO CONTRASTE === */
+.high-contrast {
+  /* Colores de alto contraste */
+  --color-background: #000000 !important;
+  --color-foreground: #FFFFFF !important;
+  --color-primary: #FFFF00 !important;
+  --color-secondary: #00FFFF !important;
+  --color-accent: #FF00FF !important;
+  --color-border: #FFFFFF !important;
+}
+
+.high-contrast body {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+.high-contrast .bg-white {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+  border: 1px solid #FFFFFF !important;
+}
+
+.high-contrast .dark\:bg-gray-800 {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+.high-contrast .text-gray-700,
+.high-contrast .text-gray-900,
+.high-contrast .dark\:text-white,
+.high-contrast .dark\:text-gray-200 {
+  color: #FFFFFF !important;
+}
+
+.high-contrast .bg-blue-600 {
+  background-color: #FFFF00 !important;
+}
+
+.high-contrast .border-gray-200,
+.high-contrast .dark\:border-gray-700 {
+  border-color: #FFFFFF !important;
+}
+
+.high-contrast .shadow-xl {
+  box-shadow: 0 0 10px #FFFF00 !important;
+}
+
+/* Para botones y elementos interactivos */
+.high-contrast button {
+  border: 1px solid #FFFFFF !important;
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+.high-contrast button:hover {
+  background-color: #333333 !important;
+  border-color: #FFFF00 !important;
+}

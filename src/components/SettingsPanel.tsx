@@ -25,30 +25,35 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
     });
   };
 
-  return (
-    // Fondo oscuro semi-transparente que cubre todo
+return (
     <div 
       className="absolute inset-0 z-[1010] bg-black/40 flex items-center justify-center p-4"
-      onClick={onClose} // Cierra el panel si haces clic fuera
+      onClick={onClose}
     >
-      {/* El panel en sí */}
+      {/* Agregar clase high-contrast condicional al panel */}
       <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm"
-        onClick={(e) => e.stopPropagation()} // Evita que el panel se cierre al hacer clic en él
+        className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm ${
+          highContrastMode ? 'border-2 border-yellow-500' : ''
+        }`}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Encabezado del Panel */}
-        <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
-          <h3 className="text-lg font-medium dark:text-white">Ajustes</h3>
+        {/* Encabezado con borde más visible en alto contraste */}
+        <div className={`flex justify-between items-center p-4 border-b dark:border-gray-700 ${
+          highContrastMode ? 'border-yellow-500' : ''
+        }`}>
+          <h3 className="text-lg font-medium dark:text-white">Ajustes de Accesibilidad</h3>
           <button 
             onClick={onClose} 
-            className="p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className={`p-1 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+              highContrastMode ? 'border border-white' : ''
+            }`}
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Cuerpo del Panel con los ajustes */}
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-6">
           {/* Ajuste de Guía de Voz */}
           <div className="flex justify-between items-center">
             <label 
@@ -60,21 +65,22 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
               ) : (
                 <VolumeX className="h-5 w-5" />
               )}
-              <span>Guía de Voz</span>
+              <span className="font-medium">Guía de Voz</span>
             </label>
             
-            {/* Interruptor de Guía de Voz */}
             <button
               id="voiceGuideToggle"
               role="switch"
               aria-checked={isVoiceActive}
               onClick={handleToggleVoiceGuide}
               className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 rounded-full cursor-pointer transition-colors duration-200 ease-in-out
-                ${isVoiceActive ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'}
-              `}
+                ${isVoiceActive ? 
+                  highContrastMode ? 'bg-yellow-500' : 'bg-blue-600' 
+                  : 'bg-gray-200 dark:bg-gray-600'
+                }`}
             >
               <span 
-                className={`inline-block h-5 w-5 bg-white rounded-full shadow-lg transform transition duration-200 ease-in-out
+                className={`inline-block h-4 w-4 bg-white rounded-full shadow-lg transform transition duration-200 ease-in-out
                   ${isVoiceActive ? 'translate-x-6' : 'translate-x-1'}
                 `}
               />
@@ -88,30 +94,36 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
               className="flex items-center space-x-2 text-gray-700 dark:text-gray-200"
             >
               <Moon className="h-5 w-5" />
-              <span>Modo Alto Contraste</span>
+              <span className="font-medium">Modo Alto Contraste</span>
             </label>
             
-            {/* Interruptor de Alto Contraste */}
             <button
               id="highContrastToggle"
               role="switch"
               aria-checked={highContrastMode}
               onClick={handleToggleHighContrast}
               className={`relative inline-flex items-center h-6 w-11 flex-shrink-0 rounded-full cursor-pointer transition-colors duration-200 ease-in-out
-                ${highContrastMode ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-600'}
-              `}
+                ${highContrastMode ? 
+                  highContrastMode ? 'bg-yellow-500' : 'bg-blue-600' 
+                  : 'bg-gray-200 dark:bg-gray-600'
+                }`}
             >
               <span 
-                className={`inline-block h-5 w-5 bg-white rounded-full shadow-lg transform transition duration-200 ease-in-out
+                className={`inline-block h-4 w-4 bg-white rounded-full shadow-lg transform transition duration-200 ease-in-out
                   ${highContrastMode ? 'translate-x-6' : 'translate-x-1'}
                 `}
               />
             </button>
           </div>
-          
-          {/* Aquí puedes añadir más ajustes en el futuro */}
+
+          {/* Indicador de estado */}
+          {highContrastMode && (
+            <div className="p-2 bg-yellow-500 text-black text-center rounded text-sm font-bold">
+              🎯 MODO ALTO CONTRASTE ACTIVADO
+            </div>
+          )}
         </div>
       </div>
     </div>
-  );
+);
 };
