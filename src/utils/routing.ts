@@ -2,9 +2,9 @@
 import { 
     IGraph, IGraphData, GraphNode, Settings, BuildingData, RoutesData, 
     CurrentRoute, IDijkstraResult, Location,
-    Instruction
+    EnhancedInstruction
 } from '../types';
-import { calculateDistance } from './geometry';
+import { calculateDistance, calculateAngle } from './geometry';
 
 // --- Lógica de Construcción de Grafo ---
 
@@ -123,9 +123,7 @@ export const buildGraphFromGeoJSON = (
     return { graph, nodesById, nodeMap };
 };
 
-
 // --- Lógica de Búsqueda de Ruta (Dijkstra) ---
-// (Esta es tu función 'findPathInGraph' original)
 export const findPathDijkstra = (
     graph: IGraph, 
     nodesById: Map<number, GraphNode>,
@@ -215,58 +213,25 @@ export const formatRouteResult = (
     destinationName: string
 ): CurrentRoute => {
     
+    if (!routeResult.nodes || routeResult.nodes.length === 0) {
+        throw new Error('No hay nodos en la ruta calculada');
+    }
+
     const routeNodes = routeResult.nodes;
-    const instructions: Instruction[] = [];
     
-    // --- 1. AÑADIR COORDENADAS DE INICIO Y FIN ---
+    // --- 1. COORDENADAS CORREGIDAS ---
     const routeCoordinates: [number, number][] = [
-        [startLocation.lat, startLocation.lng], // Punto de inicio (GPS)
-        ...routeNodes.map(node => node.coord),   // Nodos de la ruta
-        [destinationLocation.lat, destinationLocation.lng] // Punto final (Destino)
+        [startLocation.lat, startLocation.lng],
+        ...routeNodes.map(node => node.coord),
+        [destinationLocation.lat, destinationLocation.lng]
     ];
     
-    // --- 2. GENERAR INSTRUCCIONES (AHORA SIMPLIFICADO) ---
-    
-    // Instrucción de inicio
-    instructions.push({
-        type: 'start',
-        text: `Sigue la ruta podotactil hacia ${destinationName}`,
-        distance: 0,
-        node: routeNodes[0]
-    });
-
-    let lastInstructionNode = routeNodes[0];
-    
-    for (let i = 1; i < routeNodes.length; i++) {
-        const currentNode = routeNodes[i];
-        
-        let instructionText = "";
-
-        
-
-        // --- HEMOS ELIMINADO EL "EVENTO 2" ---
-        // (Ya no generamos "Atención, escaleras" desde aquí)
-
-        // Si generamos una instrucción de GIRO, la añadimos
-        if (instructionText) {
-            const distance = calculateDistance(lastInstructionNode, currentNode);
-            instructions.push({
-                type: 'turn', // (Mejor tipo que 'routeType')
-                text: instructionText,
-                distance: distance,
-                node: currentNode
-            });
-            lastInstructionNode = currentNode; // Reiniciar el contador de distancia
-        }
-    }
-    
-    // Instrucción de llegada
-    instructions.push({
-        type: 'arrival',
-        text: `Has llegado a ${destinationName}`,
-        distance: calculateDistance(lastInstructionNode, routeNodes[routeNodes.length-1]),
-        node: routeNodes[routeNodes.length - 1]
-    });
+    // --- 2. GENERAR INSTRUCCIONES MEJORADAS ---
+    // CORRECCIÓN: Solo pasar 2 argumentos
+    const instructions: EnhancedInstruction[] = generateEnhancedInstructions(
+        routeNodes, 
+        destinationName
+    );
     
     return {
         coordinates: routeCoordinates,
@@ -275,4 +240,102 @@ export const formatRouteResult = (
         instructions: instructions,
         nodes: routeNodes
     };
+};
+
+// --- FUNCIÓN PARA GENERAR INSTRUCCIONES MEJORADAS ---
+const generateEnhancedInstructions = (
+    nodes: GraphNode[],
+    destinationName: string // SOLO 2 parámetros
+): EnhancedInstruction[] => {
+    const instructions: EnhancedInstruction[] = [];
+    
+    if (nodes.length === 0) return instructions;
+
+    let cumulativeDistance = 0;
+
+    // Instrucción de inicio
+    instructions.push({
+        type: 'start',
+        text: `Iniciar ruta hacia ${destinationName}. Siga la ruta podotactil`,
+        distance: 0,
+        node: nodes[0],
+        cumulativeDistance: 0
+    });
+
+    // Generar instrucciones para cada segmento
+    for (let i = 1; i < nodes.length - 1; i++) {
+        const prevNode = nodes[i - 1];
+        const currentNode = nodes[i];
+        const nextNode = nodes[i + 1];
+
+        const segmentDistance = calculateDistance(prevNode, currentNode);
+        cumulativeDistance += segmentDistance;
+
+        // Calcular ángulo de giro
+        const angle = calculateAngle(
+            [prevNode.lng, prevNode.lat],
+            [currentNode.lng, currentNode.lat],
+            [nextNode.lng, nextNode.lat]
+        );
+
+        // Determinar tipo de instrucción basado en el ángulo
+        let instructionType: EnhancedInstruction['type'] = 'continue';
+        let direction: EnhancedInstruction['direction'] | undefined = undefined;
+        let instructionText = "";
+
+        if (Math.abs(angle) < 30) {
+            // Continuar recto
+            instructionText = "Continuar recto";
+            direction = 'straight';
+        } else if (angle > 30 && angle <= 100) {
+            // Giro suave a la izquierda
+            instructionType = 'turn';
+            direction = 'right';
+            instructionText = "Girar ligeramente a la derecha";
+        } else if (angle > 100) {
+            // Giro pronunciado a la izquierda
+            instructionType = 'turn';
+            direction = 'right';
+            instructionText = "Girar a la derecha";
+        } else if (angle < -30 && angle >= -100) {
+            // Giro suave a la derecha
+            instructionType = 'turn';
+            direction = 'left';
+            instructionText = "Girar ligeramente a la izquierda";
+        } else if (angle < -100) {
+            // Giro pronunciado a la derecha
+            instructionType = 'turn';
+            direction = 'left';
+            instructionText = "Girar a la izquierda";
+        }
+
+        // Solo agregar instrucción si es significativa
+        if (instructionType === 'turn' || (i % 3 === 0 && instructionText)) {
+            instructions.push({
+                type: instructionType,
+                direction: direction,
+                text: instructionText,
+                distance: segmentDistance,
+                node: currentNode,
+                cumulativeDistance: cumulativeDistance,
+                turnAngle: angle
+            });
+        }
+    }
+
+    // Instrucción de llegada
+    if (nodes.length >= 2) {
+        const lastSegmentDistance = calculateDistance(nodes[nodes.length - 2], nodes[nodes.length - 1]);
+        cumulativeDistance += lastSegmentDistance;
+
+        instructions.push({
+            type: 'arrival',
+            text: `Has llegado a ${destinationName}`,
+            distance: lastSegmentDistance,
+            node: nodes[nodes.length - 1],
+            cumulativeDistance: cumulativeDistance
+        });
+    }
+
+    return instructions;
 };

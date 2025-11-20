@@ -29,10 +29,10 @@ export interface Location {
 }
 
 export interface CurrentRoute {
-    coordinates: [number, number][]; // Array de [lat, lng]
+    coordinates: [number, number][];
     distance: number;
     type: 'dijkstra_optimized' | 'direct';
-    instructions: Instruction[];
+    instructions: EnhancedInstruction[]; // Cambiar Instruction por EnhancedInstruction
     nodes: GraphNode[];
 }
 
@@ -43,6 +43,16 @@ export interface Instruction {
     node: GraphNode;
 }
 
+// REEMPLAZA la interface EnhancedInstruction con:
+export interface EnhancedInstruction {
+  type: 'start' | 'turn' | 'continue' | 'arrival' | 'elevator' | 'stairs' | 'ramp';
+  direction?: 'left' | 'right' | 'straight';
+  text: string;
+  distance: number;
+  node: GraphNode;
+  cumulativeDistance: number;
+  turnAngle?: number;
+}
 // --- Destinos ---
 
 export interface Destination {

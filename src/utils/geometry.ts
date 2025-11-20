@@ -86,3 +86,23 @@ export const getPolygonCenter = (coordinates: number[][]): [number, number] => {
     });
     return [sumLat / coordinates.length, sumLng / coordinates.length];
 };
+
+export const calculateAngle = (
+  pointA: [number, number], 
+  pointB: [number, number], 
+  pointC: [number, number]
+): number => {
+  const AB = { x: pointB[1] - pointA[1], y: pointB[0] - pointA[0] };
+  const BC = { x: pointC[1] - pointB[1], y: pointC[0] - pointB[0] };
+  
+  const dotProduct = AB.x * BC.x + AB.y * BC.y;
+  const magnitudeAB = Math.sqrt(AB.x * AB.x + AB.y * AB.y);
+  const magnitudeBC = Math.sqrt(BC.x * BC.x + BC.y * BC.y);
+  
+  if (magnitudeAB === 0 || magnitudeBC === 0) return 0;
+  
+  const angle = Math.acos(dotProduct / (magnitudeAB * magnitudeBC));
+  const crossProduct = AB.x * BC.y - AB.y * BC.x;
+  
+  return crossProduct > 0 ? angle * (180 / Math.PI) : -angle * (180 / Math.PI);
+};
