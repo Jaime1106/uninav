@@ -5,6 +5,7 @@ import { useRouting } from '../hooks/useRouting';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { Destination } from '../types';
 import { Search, Mic } from 'lucide-react';
+import logo from '../assets/Logo_uninav.png'
 
 export const Searchbar: React.FC = () => {
     const [query, setQuery] = useState('');
@@ -47,8 +48,8 @@ export const Searchbar: React.FC = () => {
                 {/* Logo a la izquierda */}
                 <div className="flex-shrink-0 mr-4">
                     <img 
-                        src="./src/assets/Logo_uninav.png" 
-                        alt="Logo" 
+                        src={logo} 
+                        alt="logo" 
                         className="h-15 w-20 justify-left" 
                         // Ajusta la ruta y tamaño según tu logo
                     />

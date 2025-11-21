@@ -25,7 +25,8 @@ export const categories = [
                 { name: 'Creatio lab', displayName: 'Creatio Lab' },
                 { name: 'Multidiomas', displayName: 'Centro de Idiomas' },
                 { name: 'CED', displayName: 'CED' },
-                { name: 'salones CUL', displayName: 'Salones CUL' }
+                { name: 'salones CUL', displayName: 'Salones CUL' },
+                { name: 'Coliseo auditorio', displayName: 'Coliseo Auditorio' }
             ]
         },
         {
@@ -35,7 +36,6 @@ export const categories = [
             items: [
                 { name: 'Cancha multiple', displayName: 'Cancha Múltiple' },
                 { name: 'Gimnasio y salon de baile', displayName: 'Gimnasio' },
-                { name: 'Coliseo auditorio', displayName: 'Coliseo Auditorio' }
             ]
         },
         {

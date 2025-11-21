@@ -11,7 +11,7 @@ import { useGPS } from "./hooks/useGPS";
 import { SimulationProvider } from "./components/SimulationProvider";
 import { EnhancedInstruction } from "./types";
 
-const IS_DEVELOPMENT = true;
+const IS_DEVELOPMENT = false;
 
 /**
  * Simplifica las instrucciones para avisos de distancia
