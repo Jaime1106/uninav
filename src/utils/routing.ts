@@ -243,9 +243,12 @@ export const formatRouteResult = (
 };
 
 // --- FUNCIÓN PARA GENERAR INSTRUCCIONES MEJORADAS ---
+// REEMPLAZA completamente la función generateEnhancedInstructions:
+
+// --- FUNCIÓN PARA GENERAR INSTRUCCIONES MEJORADAS ---
 const generateEnhancedInstructions = (
     nodes: GraphNode[],
-    destinationName: string // SOLO 2 parámetros
+    destinationName: string
 ): EnhancedInstruction[] => {
     const instructions: EnhancedInstruction[] = [];
     
@@ -282,35 +285,39 @@ const generateEnhancedInstructions = (
         let instructionType: EnhancedInstruction['type'] = 'continue';
         let direction: EnhancedInstruction['direction'] | undefined = undefined;
         let instructionText = "";
-
+        
+        // CORRECCIÓN: Los ángulos positivos son giros a la izquierda, negativos a la derecha
         if (Math.abs(angle) < 30) {
-            // Continuar recto
-            instructionText = "Continuar recto";
-            direction = 'straight';
+            // Continuar recto - SOLO si es significativo (segmentos largos)
+            if (segmentDistance > 20) {
+                instructionType = 'continue';
+                direction = 'straight';
+                instructionText = `Siga recto por ${Math.round(segmentDistance)} metros`;
+            }
         } else if (angle > 30 && angle <= 100) {
-            // Giro suave a la izquierda
+            // Giro suave a la IZQUIERDA (ángulo positivo)
             instructionType = 'turn';
-            direction = 'right';
-            instructionText = "Girar ligeramente a la derecha";
+            direction = 'left';
+            instructionText = `En ${Math.round(segmentDistance)} metros gire ligeramente a la izquierda`;
         } else if (angle > 100) {
-            // Giro pronunciado a la izquierda
+            // Giro pronunciado a la IZQUIERDA (ángulo positivo)
+            instructionType = 'turn';
+            direction = 'left';
+            instructionText = `En ${Math.round(segmentDistance)} metros gire a la izquierda`;
+        } else if (angle < -30 && angle >= -100) {
+            // Giro suave a la DERECHA (ángulo negativo)
             instructionType = 'turn';
             direction = 'right';
-            instructionText = "Girar a la derecha";
-        } else if (angle < -30 && angle >= -100) {
-            // Giro suave a la derecha
-            instructionType = 'turn';
-            direction = 'left';
-            instructionText = "Girar ligeramente a la izquierda";
+            instructionText = `En ${Math.round(segmentDistance)} metros gire ligeramente a la derecha`;
         } else if (angle < -100) {
-            // Giro pronunciado a la derecha
+            // Giro pronunciado a la DERECHA (ángulo negativo)
             instructionType = 'turn';
-            direction = 'left';
-            instructionText = "Girar a la izquierda";
+            direction = 'right';
+            instructionText = `En ${Math.round(segmentDistance)} metros gire a la derecha`;
         }
 
-        // Solo agregar instrucción si es significativa
-        if (instructionType === 'turn' || (i % 3 === 0 && instructionText)) {
+        // Solo agregar instrucción si es significativa (giros o continuar en segmentos largos)
+        if (instructionText && (instructionType === 'turn' || segmentDistance > 20)) {
             instructions.push({
                 type: instructionType,
                 direction: direction,
