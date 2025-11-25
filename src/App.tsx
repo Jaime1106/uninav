@@ -66,7 +66,7 @@ export const App: React.FC = () => {
         const root = document.documentElement;
         
         // Remover todas las clases de tema primero
-        root.classList.remove('high-contrast', 'dark');
+        root.classList.remove('high-contrast', 'dark', 'light');
         
         // Aplicar solo alto contraste si está activado
         if (settings.highContrastMode) {

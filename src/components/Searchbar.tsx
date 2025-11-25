@@ -40,8 +40,9 @@ export const Searchbar: React.FC = () => {
         calculateRoute(destination);
     };
 
-    return (
-        <div className="absolute shrink-0 z-1000 w-full bg-white shadow-md dark:bg-gray-900 dark:border-b dark:border-gray-700">
+return (
+        // Header completamente blanco
+        <div className="absolute shrink-0 z-1000 w-full bg-white shadow-md border-b border-gray-200">
             
             {/* Contenedor principal con logo y buscador */}
             <div className="flex items-center p-4">
@@ -49,9 +50,8 @@ export const Searchbar: React.FC = () => {
                 <div className="flex-shrink-0 mr-4">
                     <img 
                         src={logo} 
-                        alt="logo" 
-                        className="h-15 w-20 justify-left" 
-                        // Ajusta la ruta y tamaño según tu logo
+                        alt="Logo" 
+                        className="h-13 w-15 object-containS" 
                     />
                 </div>
 
@@ -65,17 +65,22 @@ export const Searchbar: React.FC = () => {
                             onChange={(e) => handleSearch(e.target.value)}
                             placeholder={isRoutingLoading ? "Cargando rutas..." : "Buscar destino..."}
                             disabled={isRoutingLoading}
-                            className="flex-1 p-2 pl-8 text-lg bg-transparent focus:outline-none w-full"
+                            className="flex-1 p-2 pl-8 text-lg bg-transparent focus:outline-none w-full text-gray-900 placeholder-gray-500"
                         />
+                        {/* Botón del micrófono con fondo blanco */}
                         <button 
                             onClick={() => startListening()}
-                            className={`p-2 rounded-full ml-2 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-100 text-blue-600'}`}
+                            className={`p-2 rounded-full ml-2 border border-gray-300 ${
+                                isListening 
+                                    ? 'bg-red-500 text-white animate-pulse border-red-500' 
+                                    : 'bg-white text-blue-600 hover:bg-gray-50'
+                            }`}
                         >
                             <Mic className="h-6 w-6" />
                         </button>
                     </div>
 
-                    {/* Lista de resultados flotante */}
+                    {/* Lista de resultados flotante - también blanca */}
                     {results.length > 0 && (
                         <ul 
                             className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto z-10"
@@ -84,10 +89,10 @@ export const Searchbar: React.FC = () => {
                                 <li 
                                     key={dest.name} 
                                     onClick={() => handleSelect(dest)}
-                                    className="p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 first:rounded-t-lg last:rounded-b-lg last:border-b-0"
+                                    className="p-3 cursor-pointer hover:bg-gray-50 border-b border-gray-100 first:rounded-t-lg last:rounded-b-lg last:border-b-0 text-gray-900"
                                 >
                                     <div className="font-medium">{dest.displayName}</div>
-                                    <div className="text-sm text-gray-500">{dest.category}</div>
+                                    <div className="text-sm text-gray-600">{dest.category}</div>
                                 </li>
                             ))}
                         </ul>
