@@ -14,18 +14,24 @@ export const Map: React.FC = () => {
     <MapContainer
       center={defaultPosition}
       zoom={20}
+      minZoom={17}
+      maxZoom={22}
       style={{ height: '100vh', width: '100%' }}
       zoomControl={false} // Ocultamos el zoom por defecto
+      scrollWheelZoom={true}
+      doubleClickZoom={true}
+      touchZoom={true}
+      keyboard={true}
     >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
       />
-      
+
       <UserMarker />
       <RouteLayer />
       <PointsOfInterestLayer />
-      
+
       <MapControls /> {/* <-- 2. Añade los controles DENTRO del mapa */}
 
     </MapContainer>

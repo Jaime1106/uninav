@@ -1,13 +1,13 @@
 // /src/hooks/useRouting.ts
 import { useState, useEffect, useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { 
-    buildGraphFromGeoJSON, 
-    findPathDijkstra, 
-    formatRouteResult 
+import {
+    buildGraphFromGeoJSON,
+    findPathDijkstra,
+    formatRouteResult
 } from '../utils/routing';
 import { findNearestNodes } from '../utils/geometry';
-import { BuildingData, RoutesData, IGraphData, Destination } from '../types';
+import { BuildingData, RoutesData, PointsData, IGraphData, Destination } from '../types';
 
 interface UseRoutingReturn {
     isRoutingLoading: boolean;
@@ -28,27 +28,35 @@ export const useRouting = (): UseRoutingReturn => {
             setIsLoading(false);
             return;
         }
-        
+
         const loadGraphData = async () => {
             try {
                 // --- 2. SOLUCIÓN: Cargar AMBOS archivos aquí ---
                 console.log("Cargando map.geojson (edificios)...");
                 const buildingRes = await fetch('map.geojson');
                 const buildingData = (await buildingRes.json()) as BuildingData;
-                
+
                 // Guardar los edificios en el estado global (para que useDestinations los use)
                 dispatch({ type: 'SET_BUILDING_DATA', payload: buildingData });
 
                 console.log("Cargando map_routes.geojson (rutas)...");
                 const routeRes = await fetch('map_routes.geojson');
                 const routeData = (await routeRes.json()) as RoutesData;
-                
+
+                console.log("Cargando map_points.geojson (puntos de accesibilidad)...");
+
+                const pointsRes =
+                    await fetch('map_points.geojson');
+
+                const pointsData =
+                    (await pointsRes.json()) as PointsData;
+
                 // --- 3. YA NO NECESITAMOS LA COMPROBACIÓN ANTIGUA ---
                 // (El 'if (!state.buildingData)' se va)
-                
+
                 console.log("Construyendo grafo de rutas...");
                 // Ahora sí tenemos ambos datos para construir el grafo
-                graphData = buildGraphFromGeoJSON(routeData, buildingData);
+                graphData = buildGraphFromGeoJSON(routeData, buildingData, pointsData);
                 console.log("Grafo construido:", graphData);
                 console.log(`   Nodos: ${graphData.graph.nodes.length}`);
                 console.log(`   Ejes: ${graphData.graph.edges.length}`);
@@ -59,7 +67,7 @@ export const useRouting = (): UseRoutingReturn => {
             }
         };
         loadGraphData();
-    // --- 4. SOLO SE EJECUTA UNA VEZ ---
+        // --- 4. SOLO SE EJECUTA UNA VEZ ---
     }, [dispatch]); // dispatch es una dependencia estable
 
     // 2. Función para CALCULAR una ruta
@@ -72,13 +80,13 @@ export const useRouting = (): UseRoutingReturn => {
 
         const { graph, nodesById } = graphData;
         const { currentLocation, settings } = state;
-        
+
         if (!destination.lat || !destination.lng) {
             console.error("¡El destino no tiene coordenadas!", destination);
             return;
         }
         const destinationLocation = { lat: destination.lat, lng: destination.lng };
-        
+
         const startNodes = findNearestNodes(currentLocation, graph.nodes, 150);
         const endNodes = findNearestNodes(destinationLocation, graph.nodes, 150);
 
@@ -94,15 +102,15 @@ export const useRouting = (): UseRoutingReturn => {
 
         if (routeResult) {
             const finalRoute = formatRouteResult(
-                routeResult, 
-                currentLocation, 
-                destinationLocation, 
+                routeResult,
+                currentLocation,
+                destinationLocation,
                 destination.displayName
             );
-            
+
             dispatch({ type: 'SET_ROUTE', payload: finalRoute });
             dispatch({ type: 'START_NAVIGATION' });
-            
+
         } else {
             console.warn('No se encontró ruta con Dijkstra');
             dispatch({ type: 'SET_ROUTE', payload: null });
