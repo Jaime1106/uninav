@@ -815,9 +815,6 @@
             },
             "id": 21
         },
-        {
-            "type": "FeatureCollection",
-            "features": [
                 {
                     "type": "Feature",
                     "properties": {
@@ -866,9 +863,7 @@
                         ]
                     },
                     "id": 22
-                }
-            ]
-        },
+                },
         {
             "type": "Feature",
             "properties": {
