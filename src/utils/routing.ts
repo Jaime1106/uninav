@@ -1,8 +1,16 @@
 // /src/utils/routing.ts
-import { 
-    IGraph, IGraphData, GraphNode, Settings, BuildingData, RoutesData, 
-    CurrentRoute, IDijkstraResult, Location,
-    EnhancedInstruction
+import {
+IGraph,
+IGraphData,
+GraphNode,
+Settings,
+BuildingData,
+RoutesData,
+PointsData,
+CurrentRoute,
+IDijkstraResult,
+Location,
+EnhancedInstruction
 } from '../types';
 import { calculateDistance, calculateAngle } from './geometry';
 
@@ -51,17 +59,84 @@ const createIntersections = (graph: IGraph, connectionDistance: number) => {
     console.log(`Se crearon ${intersectionsCreated} puentes de intersección.`);
 };
 
+const getNearbyRouteType = (
+    node: GraphNode,
+    pointsData: PointsData | undefined
+): GraphNode['routeType'] => {
+
+    if (!pointsData) {
+        return node.routeType;
+    }
+
+    let closest:
+        { type: string; distance: number } | null = null;
+
+    for (const point of pointsData.features) {
+
+        if (point.geometry.type !== 'Point') {
+            continue;
+        }
+
+        const [lng, lat] =
+            point.geometry.coordinates;
+
+        const distance =
+            calculateDistance(
+                node,
+                { lat, lng }
+            );
+
+        if (
+            distance <= 8 &&
+            (!closest ||
+                distance < closest.distance)
+        ) {
+            closest = {
+                type: String(
+                    point.properties.type ?? ''
+                ).toLowerCase(),
+
+                distance
+            };
+        }
+    }
+
+    if (!closest) {
+        return node.routeType;
+    }
+
+    if (closest.type === 'stairs') {
+        return 'stairs';
+    }
+
+    if (
+        closest.type === 'ramp' ||
+        closest.type === 'ramp_start'
+    ) {
+        return 'ramp';
+    }
+
+    if (
+        closest.type === 'relief_change'
+    ) {
+        return 'relief_change';
+    }
+
+    return node.routeType;
+};
+
 export const buildGraphFromGeoJSON = (
-    routeData: RoutesData, 
-    _buildingData: BuildingData
+    routeData: RoutesData,
+    _buildingData: BuildingData,
+    pointsData?: PointsData
 ): IGraphData => {
-    
+
     const graph: IGraph = { nodes: [], edges: [], obstacleNodes: new Set() };
     const nodesById: Map<number, GraphNode> = new Map();
     const nodeMap: Map<string, GraphNode[]> = new Map();
-    
+
     let nodeId = 0;
-    
+
     // --- 1. Usar el 'index' para un nombre único ---
     routeData.features.forEach((route, index) => {
         // Asegurarnos de que SÓLO leemos Líneas
@@ -70,40 +145,48 @@ export const buildGraphFromGeoJSON = (
         }
 
         const coordinates = route.geometry.coordinates as [number, number][];
-        
+
         // Damos a cada acera un nombre único como "route_0", "route_1", etc.
         const routeName = `route_${index}`;
-        
+
         // Esto ahora buscará {"type": "stairs"} si lo añades
-        const routeType = classifyRouteType(route.properties); 
-        
+        const routeType = classifyRouteType(route.properties);
+
         const routeNodes: GraphNode[] = [];
         coordinates.forEach((coord, nodeIndex) => {
             const point: [number, number] = [coord[1], coord[0]]; // [lat, lng]
-            
+
             const node: GraphNode = {
                 id: nodeId++,
                 lat: point[0],
                 lng: point[1],
                 coord: point,
-                route: routeName, // <-- Nombre único
+                route: routeName,
                 routeType: routeType,
-                isEndpoint: nodeIndex === 0 || nodeIndex === coordinates.length - 1,
-                isNearObstacle: false, 
+                isEndpoint:
+                    nodeIndex === 0 ||
+                    nodeIndex === coordinates.length - 1,
+                isNearObstacle: false,
             };
-            
+
+            node.routeType =
+                getNearbyRouteType(
+                    node,
+                    pointsData
+                );
+
             graph.nodes.push(node);
             nodesById.set(node.id, node);
             routeNodes.push(node);
         });
-        
+
         // Crear conexiones (ejes) dentro de la misma acera
         for (let i = 1; i < routeNodes.length; i++) {
             const prevNode = routeNodes[i - 1];
             const currentNode = routeNodes[i];
             const distance = calculateDistance(prevNode, currentNode);
-            const cost = distance; 
-            
+            const cost = distance;
+
             graph.edges.push({
                 from: prevNode.id, to: currentNode.id, distance, cost,
                 route: routeName, routeType, bidirectional: true
@@ -114,7 +197,7 @@ export const buildGraphFromGeoJSON = (
             });
         }
     });
-    
+
     // --- 2. Ya no necesitamos el "hack" de 1000m ---
     // Tu red está conectada, 20m es suficiente para unir pequeños huecos
     createIntersections(graph, 20);
@@ -125,13 +208,13 @@ export const buildGraphFromGeoJSON = (
 
 // --- Lógica de Búsqueda de Ruta (Dijkstra) ---
 export const findPathDijkstra = (
-    graph: IGraph, 
+    graph: IGraph,
     nodesById: Map<number, GraphNode>,
-    startId: number, 
-    endId: number, 
+    startId: number,
+    endId: number,
     settings: Settings
 ): IDijkstraResult | null => {
-    
+
     const distances: { [key: number]: number } = {};
     const costs: { [key: number]: number } = {};
     const previous: { [key: number]: number | null } = {};
@@ -143,7 +226,7 @@ export const findPathDijkstra = (
         previous[node.id] = null;
         unvisited.add(node.id);
     });
-    
+
     while (unvisited.size > 0) {
         let currentId = -1;
         let minCost = Infinity;
@@ -169,14 +252,14 @@ export const findPathDijkstra = (
 
             // Aplicar preferencias de accesibilidad
             if (settings.avoidStairs && edge.routeType === 'stairs') {
-                edgeCost *= 5; // Penalización alta por escaleras
+                edgeCost *= 20; // Penalización alta por escaleras
             }
             if (settings.prioritizeElevators && edge.routeType === 'ramp') {
-                edgeCost *= 0.3; // Bonificación por rampas/ascensores
+                edgeCost *= 0.65; // Bonificación por rampas/ascensores
             }
 
             const alternativeCost = costs[currentId] + edgeCost;
-            
+
             if (alternativeCost < costs[edge.to]) {
                 costs[edge.to] = alternativeCost;
                 distances[edge.to] = distances[currentId] + edge.distance;
@@ -194,7 +277,7 @@ export const findPathDijkstra = (
         path.unshift(currentId);
         currentId = previous[currentId];
     }
-    
+
     if (path[0] !== startId) return null; // Ruta inválida
 
     const pathNodes = path.map(id => nodesById.get(id)!);
@@ -207,32 +290,32 @@ export const findPathDijkstra = (
  * con coordenadas e instrucciones paso a paso.
  */
 export const formatRouteResult = (
-    routeResult: IDijkstraResult, 
-    startLocation: Location, 
-    destinationLocation: {lat: number, lng: number},
+    routeResult: IDijkstraResult,
+    startLocation: Location,
+    destinationLocation: { lat: number, lng: number },
     destinationName: string
 ): CurrentRoute => {
-    
+
     if (!routeResult.nodes || routeResult.nodes.length === 0) {
         throw new Error('No hay nodos en la ruta calculada');
     }
 
     const routeNodes = routeResult.nodes;
-    
+
     // --- 1. COORDENADAS CORREGIDAS ---
     const routeCoordinates: [number, number][] = [
         [startLocation.lat, startLocation.lng],
         ...routeNodes.map(node => node.coord),
         [destinationLocation.lat, destinationLocation.lng]
     ];
-    
+
     // --- 2. GENERAR INSTRUCCIONES MEJORADAS ---
     // CORRECCIÓN: Solo pasar 2 argumentos
     const instructions: EnhancedInstruction[] = generateEnhancedInstructions(
-        routeNodes, 
+        routeNodes,
         destinationName
     );
-    
+
     return {
         coordinates: routeCoordinates,
         distance: routeResult.totalDistance,
@@ -251,7 +334,7 @@ const generateEnhancedInstructions = (
     destinationName: string
 ): EnhancedInstruction[] => {
     const instructions: EnhancedInstruction[] = [];
-    
+
     if (nodes.length === 0) return instructions;
 
     let cumulativeDistance = 0;
@@ -259,7 +342,7 @@ const generateEnhancedInstructions = (
     // Instrucción de inicio
     instructions.push({
         type: 'start',
-        text: `Iniciar ruta hacia ${destinationName}. Siga la ruta podotactil`,
+        text: `Iniciar ruta hacia ${destinationName}.`,
         distance: 0,
         node: nodes[0],
         cumulativeDistance: 0
@@ -285,7 +368,7 @@ const generateEnhancedInstructions = (
         let instructionType: EnhancedInstruction['type'] = 'continue';
         let direction: EnhancedInstruction['direction'] | undefined = undefined;
         let instructionText = "";
-        
+
         // CORRECCIÓN: Los ángulos positivos son giros a la izquierda, negativos a la derecha
         if (Math.abs(angle) < 30) {
             // Continuar recto - SOLO si es significativo (segmentos largos)

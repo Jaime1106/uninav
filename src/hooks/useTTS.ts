@@ -49,7 +49,7 @@ export const useTTS = (): UseTTSReturn => {
         
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'es-ES';
-        utterance.rate = 0.9;
+        utterance.rate = 0.85;
         
         utterance.onend = () => {
             if (speechEnded.current) return;

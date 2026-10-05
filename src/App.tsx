@@ -6,12 +6,12 @@ import { NavigationPanel } from "./components/NavigationPanel";
 import { useAppContext } from "./context/AppContext";
 import { useTTS } from "./hooks/useTTS";
 import { usePointsOfInterest } from "./hooks/usePointsOfInterest";
-import { calculateDistance } from "./utils/geometry";
+import { calculateDistance, getPolygonCenter } from "./utils/geometry";
 import { useGPS } from "./hooks/useGPS";
 import { SimulationProvider } from "./components/SimulationProvider";
 import { EnhancedInstruction } from "./types";
 
-const IS_DEVELOPMENT = false;
+const IS_DEVELOPMENT = true;
 
 /**
  * Simplifica las instrucciones para avisos de distancia
@@ -23,27 +23,79 @@ const getSimplifiedInstruction = (instruction: EnhancedInstruction): string => {
                 return 'gire a la izquierda';
             } else if (instruction.direction === 'right') {
                 return 'gire a la derecha';
-  }
-            return 'realice la maniobra';   
-        
+            }
+            return 'realice la maniobra';
+
         case 'continue':
             return 'continúe recto';
-        
+
         case 'stairs':
             return 'encuentre las escaleras';
-        
+
         case 'elevator':
             return 'tome el ascensor';
-        
+
         case 'arrival':
             return 'llegará a su destino';
-        
+
         case 'start':
             return 'inicie la ruta';
-        
+
         default:
             return 'siga la ruta';
     }
+};
+
+const getStartingPointDescription = (
+    location: { lat: number; lng: number },
+    buildingData: any
+): string | null => {
+    if (!buildingData?.features?.length) {
+        return null;
+    }
+
+    let nearest: {
+        name: string;
+        distance: number;
+    } | null = null;
+
+    for (const feature of buildingData.features) {
+        if (feature.geometry?.type !== 'Polygon') {
+            continue;
+        }
+
+        const name = feature.properties?.name;
+
+        if (!name) {
+            continue;
+        }
+
+        const center = getPolygonCenter(
+            feature.geometry.coordinates[0]
+        );
+
+        const distance = calculateDistance(
+            location,
+            {
+                lat: center[0],
+                lng: center[1]
+            }
+        );
+
+        if (
+            distance <= 35 &&
+            (!nearest || distance < nearest.distance)
+        ) {
+            nearest = {
+                name,
+                distance
+            };
+        }
+    }
+
+    return nearest
+        ? `cerca de ${nearest.name}`
+        : null;
 };
 
 export const App: React.FC = () => {
@@ -54,6 +106,7 @@ export const App: React.FC = () => {
     const currentInstructionIndex = useRef(0);
     const announcedPOIs = React.useRef(new Set<string>());
     const announcedDistances = React.useRef(new Set<string>());
+    const announcedRouteStart = React.useRef<string | null>(null);
     const { startTracking, stopTracking } = useGPS();
     const { pointsData: loadedPointsData } = usePointsOfInterest();
 
@@ -64,16 +117,16 @@ export const App: React.FC = () => {
     // --- SISTEMA DE ALTO CONTRASTE ---
     useEffect(() => {
         const root = document.documentElement;
-        
+
         // Remover todas las clases de tema primero
         root.classList.remove('high-contrast', 'dark', 'light');
-        
+
         // Aplicar solo alto contraste si está activado
         if (settings.highContrastMode) {
             root.classList.add('high-contrast');
         }
     }, [settings.highContrastMode]);
-    
+
     // --- INICIAR GPS ---
     useEffect(() => {
         startTracking();
@@ -88,7 +141,7 @@ export const App: React.FC = () => {
 
         // --- Lógica de Puntos de Interés (POI) ---
         const PROXIMITY_POI = 15;
-        
+
         loadedPointsData?.features.forEach((point) => {
             const pointId = point.properties.name + point.geometry.coordinates.join(',');
             if (announcedPOIs.current.has(pointId)) return;
@@ -119,10 +172,10 @@ export const App: React.FC = () => {
 
         // Obtener la instrucción actual
         const currentInstruction = currentRoute.instructions[currentInstructionIndex.current];
-        
+
         // Calcular distancia REAL hasta el nodo de la instrucción actual
         const distanceToCurrentNode = calculateDistance(currentLocation, currentInstruction.node);
-        
+
         // Si estamos cerca del punto de instrucción actual, ejecutarla
         if (distanceToCurrentNode <= PROXIMITY_INSTRUCTION) {
             // 🎯 CORRECCIÓN: La instrucción YA incluye la distancia, solo hablarla
@@ -136,13 +189,13 @@ export const App: React.FC = () => {
         // --- AVISOS ANTICIPADOS PARA MANIOBRAS (solo para giros) ---
         if (currentInstruction.type === 'turn') {
             const roundedDistance = Math.round(distanceToCurrentNode);
-            
+
             // Avisos anticipados solo para giros
             if (roundedDistance === 50 || roundedDistance === 25 || roundedDistance === 10) {
                 const announcementKey = `prealert_${currentInstructionIndex.current}_${roundedDistance}`;
                 if (!announcedDistances.current.has(announcementKey)) {
                     let preAlertMessage = "";
-                    
+
                     if (roundedDistance === 50) {
                         preAlertMessage = `En 50 metros, ${getSimplifiedInstruction(currentInstruction)}`;
                     } else if (roundedDistance === 25) {
@@ -150,15 +203,15 @@ export const App: React.FC = () => {
                     } else if (roundedDistance === 10) {
                         preAlertMessage = `En 10 metros, ${getSimplifiedInstruction(currentInstruction)}`;
                     }
-                    
+
                     if (preAlertMessage) {
                         speak(preAlertMessage, false);
                         announcedDistances.current.add(announcementKey);
-                        
+
                         // Actualizar UI con aviso anticipado
-                        dispatch({ 
-                            type: "SET_INSTRUCTION", 
-                            payload: `Prepararse: ${preAlertMessage}` 
+                        dispatch({
+                            type: "SET_INSTRUCTION",
+                            payload: `Prepararse: ${preAlertMessage}`
                         });
                     }
                 }
@@ -185,6 +238,75 @@ export const App: React.FC = () => {
             dispatch({ type: 'SET_INSTRUCTION', payload: null });
         }
     }, [navigationActive, cancel, dispatch]);
+
+    useEffect(() => {
+        if (
+            !currentRoute ||
+            !navigationActive ||
+            !currentLocation ||
+            !settings.isVoiceActive
+        ) {
+            return;
+        }
+
+        const routeKey =
+            `${currentRoute.coordinates[0]?.join(',')}-` +
+            `${currentRoute.coordinates.at(-1)?.join(',')}`;
+
+        if (announcedRouteStart.current === routeKey) {
+            return;
+        }
+
+        const place = getStartingPointDescription(
+            currentLocation,
+            state.buildingData
+        );
+
+        const firstNode =
+            currentRoute.instructions[0]?.node;
+
+        const startDistance = firstNode
+            ? calculateDistance(currentLocation, firstNode)
+            : 0;
+
+        const placeText = place
+            ? ` Está ${place}.`
+            : ` Está a ${Math.max(
+                0,
+                Math.round(startDistance)
+            )} metros del punto inicial de la ruta.`;
+
+        const destinationInstruction =
+            currentRoute.instructions.at(-1)?.text;
+
+        const destinationName =
+            destinationInstruction
+                ?.replace(/^Ha llegado a /, '')
+                .replace(/\.$/, '') ||
+            'su destino';
+
+        const message =
+            `Ubicación inicial.${placeText} ` +
+            `Ruta hacia ${destinationName}.`;
+
+        speak(message, true);
+
+        dispatch({
+            type: 'SET_INSTRUCTION',
+            payload: message
+        });
+
+        announcedRouteStart.current = routeKey;
+
+    }, [
+        currentRoute,
+        navigationActive,
+        currentLocation,
+        settings.isVoiceActive,
+        state.buildingData,
+        speak,
+        dispatch
+    ]);
 
     const handleTestLocation = () => {
         console.log("Forzando ubicación de prueba...");
@@ -221,7 +343,7 @@ export const App: React.FC = () => {
                 }
 
                 const nextCoord = routeCoords[routeStepIndex.current];
-                
+
                 const simulatedLocation: any = {
                     lat: nextCoord[0],
                     lng: nextCoord[1],
