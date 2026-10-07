@@ -15,8 +15,11 @@ export const MapControls: React.FC = () => {
     const handleRecenter = () => {
         if (state.currentLocation) {
             map.flyTo(
-                [state.currentLocation.lat, state.currentLocation.lng],
-                Math.max(map.getZoom(), 20)
+                [
+                    state.currentLocation.lat,
+                    state.currentLocation.lng
+                ],
+                map.getZoom()
             );
         }
     };

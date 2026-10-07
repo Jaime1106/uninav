@@ -11,21 +11,23 @@ export const Map: React.FC = () => {
   const defaultPosition: [number, number] = [10.9950, -74.7912]; // (Ej: CUC)
 
   return (
-    <MapContainer
-      center={defaultPosition}
-      zoom={20}
-      minZoom={17}
-      maxZoom={22}
-      style={{ height: '100vh', width: '100%' }}
-      zoomControl={false} // Ocultamos el zoom por defecto
-      scrollWheelZoom={true}
-      doubleClickZoom={true}
-      touchZoom={true}
-      keyboard={true}
-    >
+  <MapContainer
+  center={defaultPosition}
+  zoom={19}
+  minZoom={17}
+  maxZoom={22}
+  style={{ height: '100vh', width: '100%' }}
+  zoomControl={false}
+  scrollWheelZoom={true}
+  doubleClickZoom={true}
+  touchZoom={true}
+  keyboard={true}
+  >
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        maxNativeZoom={19}
+        maxZoom={22}
       />
 
       <UserMarker />

@@ -23,42 +23,85 @@ interface UseDestinationsReturn {
 }
 
 // Función pura para extraer bloques (tu lógica original, pero más segura)
-const extractBlocksFromData = (buildingData: BuildingData | null): DestinationCategory['items'] => {
-    if (!buildingData) return [];
+const extractBlocksFromData = (
+    buildingData: BuildingData | null
+): DestinationCategory['items'] => {
+
+    if (!buildingData?.features?.length) {
+        return [];
+    }
 
     const blockItems: DestinationCategory['items'] = [];
     const uniqueBlocks = new Set<string>();
 
     buildingData.features.forEach(feature => {
+
+        // Evitar errores con elementos incompletos del GeoJSON
+        if (
+            !feature ||
+            !feature.properties ||
+            !feature.geometry
+        ) {
+            return;
+        }
+
         const name = feature.properties.name;
-        if (name && name.toLowerCase().includes('bloque')) {
-            const blockMatch = name.match(/bloque\s*(\d+)/i);
-            let displayName = name;
-            let key: string;
 
-            if (blockMatch) {
-                const blockNumber = blockMatch[1];
-                displayName = `Bloque ${blockNumber}`;
-                key = blockNumber;
-            } else {
-                key = name;
-            }
+        // Si no tiene nombre, ignorarlo
+        if (!name || typeof name !== 'string') {
+            return;
+        }
 
-            if (!uniqueBlocks.has(key)) {
-                uniqueBlocks.add(key);
-                blockItems.push({ name: name, displayName: displayName });
-            }
+        if (!name.toLowerCase().includes('bloque')) {
+
+            return;
+        }
+
+        const blockMatch = name.match(/^bloque\s*(\d+)$/i);
+
+        let displayName = name;
+        let key: string;
+
+        if (blockMatch) {
+
+            const blockNumber = blockMatch[1];
+
+            displayName = `Bloque ${blockNumber}`;
+            key = blockNumber;
+
+        } else {
+
+            key = name;
+
+        }
+
+        if (!uniqueBlocks.has(key)) {
+
+            uniqueBlocks.add(key);
+
+            blockItems.push({
+                name,
+                displayName
+            });
         }
     });
 
     // Ordenar numéricamente
     return blockItems.sort((a, b) => {
-        const numA = parseInt(a.displayName.match(/\d+/)?. [0] || '0');
-        const numB = parseInt(b.displayName.match(/\d+/)?. [0] || '0');
+
+        const numA = parseInt(
+            a.displayName.match(/\d+/)?.[0] || '0',
+            10
+        );
+
+        const numB = parseInt(
+            b.displayName.match(/\d+/)?.[0] || '0',
+            10
+        );
+
         return numA - numB;
     });
 };
-
 export const useDestinations = (): UseDestinationsReturn => {
     const { state } = useAppContext();
     const { buildingData } = state;
@@ -68,7 +111,7 @@ export const useDestinations = (): UseDestinationsReturn => {
     // 1. Categorías con bloques (se recalcula SOLO si buildingData cambia)
     const categories = useMemo(() => {
         const blockItems = extractBlocksFromData(buildingData);
-        
+
         // Mapeamos para no mutar el array original importado
         return baseCategories.map(category => {
             if (category.id === 'bloques') {
@@ -79,32 +122,32 @@ export const useDestinations = (): UseDestinationsReturn => {
     }, [buildingData]);
 
     // 2. Lista plana de destinos (se recalcula SOLO si las categorías cambian)
-// /src/hooks/useDestinations.ts
+    // /src/hooks/useDestinations.ts
 
-// (El resto de tu hook, 'useAppContext', 'extractBlocksFromData', 'categories', etc. se queda igual)
-// ...
+    // (El resto de tu hook, 'useAppContext', 'extractBlocksFromData', 'categories', etc. se queda igual)
+    // ...
 
     const allDestinations = useMemo(() => {
         console.log("Recalculando todos los destinos (con lógica de coincidencia exacta)...");
         if (!buildingData) {
             console.warn("buildingData es nulo, no se pueden añadir coordenadas.");
         }
-        
+
         const all: Destination[] = [];
-        
+
         categories.forEach(category => {
             category.items.forEach(item => {
                 let coords: { lat?: number, lng?: number } = {};
                 const itemName = item.name; // <-- No necesitamos toLowerCase
 
                 if (buildingData && (category.id === 'bloques' || category.id === 'servicios')) {
-                    
+
                     // --- LÓGICA CORREGIDA (COINCIDENCIA EXACTA) ---
                     const buildingFeature = buildingData.features.find(feature =>
                         feature.properties.name === itemName
                     );
                     // ---------------------------------------------
-                    
+
                     if (buildingFeature) {
                         const [lat, lng] = getPolygonCenter(buildingFeature.geometry.coordinates[0]);
                         coords = { lat, lng };
@@ -124,7 +167,7 @@ export const useDestinations = (): UseDestinationsReturn => {
         return all;
     }, [categories, buildingData]);
 
-// ... (El resto de tu hook 'useDestinations' sigue igual)
+    // ... (El resto de tu hook 'useDestinations' sigue igual)
 
     // 3. Destinos rápidos (tu lógica de generateQuickDestinations)
     const quickDestinations = useMemo(() => {
@@ -145,8 +188,8 @@ export const useDestinations = (): UseDestinationsReturn => {
         if (!term) return null;
 
         // Búsqueda exacta (más rápida)
-        let dest = allDestinations.find(d => 
-            d.name.toLowerCase() === term || 
+        let dest = allDestinations.find(d =>
+            d.name.toLowerCase() === term ||
             d.displayName.toLowerCase() === term
         );
         if (dest) return dest;
@@ -154,15 +197,15 @@ export const useDestinations = (): UseDestinationsReturn => {
         // Búsqueda por alias (voiceCommandsDictionary)
         for (const [key, aliases] of Object.entries(voiceCommandsDictionary.destinations)) {
             if (aliases.some(alias => term.includes(alias))) {
-                return allDestinations.find(d => 
+                return allDestinations.find(d =>
                     d.displayName.toLowerCase().includes(key)
                 ) || null;
             }
         }
-        
+
         // Búsqueda parcial (más lenta)
-        dest = allDestinations.find(d => 
-            d.name.toLowerCase().includes(term) || 
+        dest = allDestinations.find(d =>
+            d.name.toLowerCase().includes(term) ||
             d.displayName.toLowerCase().includes(term)
         );
         if (dest) return dest;

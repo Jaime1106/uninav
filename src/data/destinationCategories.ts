@@ -24,8 +24,6 @@ export const categories = [
                 { name: 'Enfermeria', displayName: 'Enfermería' },
                 { name: 'Creatio lab', displayName: 'Creatio Lab' },
                 { name: 'Multidiomas', displayName: 'Centro de Idiomas' },
-                { name: 'CED', displayName: 'CED' },
-                { name: 'salones CUL', displayName: 'Salones CUL' },
                 { name: 'Coliseo auditorio', displayName: 'Coliseo Auditorio' }
             ]
         },

@@ -5,40 +5,50 @@ import { useAppContext } from '../context/AppContext';
 import L from 'leaflet';
 
 const userIcon = L.icon({
-    iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
 });
 
 export const UserMarker: React.FC = () => {
   const { state } = useAppContext();
   const { currentLocation, navigationActive } = state;
   const map = useMap();
-  
+
   // --- AÑADIMOS ESTA LÍNEA ---
   // Usamos un Ref para saber si ya centramos la cámara una vez
   const didCenterMap = useRef(false);
 
-useEffect(() => {
-    if (currentLocation) {
-      
-      // 1. MODO "EXPLORACIÓN" (Primera Carga)
-      // ¿Es la primera vez que te encontramos?
-      if (!didCenterMap.current) {
-        map.flyTo([currentLocation.lat, currentLocation.lng], 17);
-        didCenterMap.current = true;
-      }
-      
-      // 2. MODO "NAVEGACIÓN" (Seguimiento)
-      // ¿Ya te encontramos Y ADEMÁS estás navegando?
-      else if (navigationActive) {
-        map.flyTo([currentLocation.lat, currentLocation.lng], map.getZoom());
-      }
-      
-      // 3. SI NINGUNO SE CUMPLE:
-      // (Es decir, ya te encontramos pero NO estás navegando)
-      // No hacemos nada. El marcador se mueve, pero la cámara se queda quieta.
+  useEffect(() => {
+    if (!currentLocation) return;
+
+    // 1. MODO "EXPLORACIÓN" (Primera carga)
+    // Centrar el mapa solamente la primera vez
+    if (!didCenterMap.current) {
+      map.flyTo(
+        [currentLocation.lat, currentLocation.lng],
+        17
+      );
+
+      didCenterMap.current = true;
+      return;
     }
+
+    // 2. MODO "NAVEGACIÓN" (Seguimiento)
+    // Durante una ruta, seguimos al usuario
+    // sin modificar el nivel de zoom.
+    if (navigationActive) {
+      map.panTo(
+        [currentLocation.lat, currentLocation.lng],
+        {
+          animate: true,
+          duration: 0.5
+        }
+      );
+    }
+
+    // 3. Si no estamos navegando:
+    // no movemos la cámara.
   }, [currentLocation, navigationActive, map]);
 
   if (!currentLocation) {

@@ -34,7 +34,8 @@ export const voiceCommandsDictionary = {
         'Bloque 9': ['bloque 9', 'bloque nueve', 'edificio 9', 'edificio nueve', 'bloque nueve'],
         'Bloque 10': ['bloque 10', 'bloque diez', 'edificio 10', 'edificio diez', 'bloque diez'],
         'Bloque 11': ['bloque 11', 'bloque once', 'edificio 11', 'edificio once', 'bloque once'],
-        'Bloque 12': ['bloque 12', 'bloque doce', 'edificio 12', 'edificio doce', 'bloque doce']
+        'Bloque 12': ['bloque 12', 'bloque doce', 'edificio 12', 'edificio doce', 'bloque doce'],
+        'Bloque 13': ['bloque 13', 'bloque trece', 'edificio 13', 'edificio trece', 'bloque trece']
     },
     
     // Comandos de control
