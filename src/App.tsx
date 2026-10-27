@@ -135,7 +135,9 @@ export const App: React.FC = () => {
 
     // --- BUCLE PRINCIPAL DE NAVEGACIÓN MEJORADO ---
     React.useEffect(() => {
-        if (!currentLocation || !currentRoute || !navigationActive || !settings.isVoiceActive) {
+        // La guía por voz permanece activa durante toda la navegación.
+        // No depende del interruptor settings.isVoiceActive.
+        if (!currentLocation || !currentRoute || !navigationActive) {
             return;
         }
 
@@ -186,35 +188,39 @@ export const App: React.FC = () => {
             return;
         }
 
-        // --- AVISOS ANTICIPADOS PARA MANIOBRAS (solo para giros) ---
-        if (currentInstruction.type === 'turn') {
-            const roundedDistance = Math.round(distanceToCurrentNode);
+        // --- GUIA VOCAL ANTICIPADA: DISTANCIA + PROXIMA ACCION ---
+        // Se usan umbrales, no igualdad exacta, para que el GPS no omita
+        // el aviso si pasa, por ejemplo, de 53 m a 47 m.
+        const instructionNeedsPreAlert = [
+            'turn',
+            'continue',
+            'stairs',
+            'elevator',
+            'arrival'
+        ].includes(currentInstruction.type);
 
-            // Avisos anticipados solo para giros
-            if (roundedDistance === 50 || roundedDistance === 25 || roundedDistance === 10) {
-                const announcementKey = `prealert_${currentInstructionIndex.current}_${roundedDistance}`;
-                if (!announcedDistances.current.has(announcementKey)) {
-                    let preAlertMessage = "";
+        if (instructionNeedsPreAlert) {
+            const thresholds = [50, 25, 10];
+            const threshold = thresholds.find((value) => {
+                const key = `prealert_${currentInstructionIndex.current}_${value}`;
+                return distanceToCurrentNode <= value &&
+                    !announcedDistances.current.has(key);
+            });
 
-                    if (roundedDistance === 50) {
-                        preAlertMessage = `En 50 metros, ${getSimplifiedInstruction(currentInstruction)}`;
-                    } else if (roundedDistance === 25) {
-                        preAlertMessage = `En 25 metros, ${getSimplifiedInstruction(currentInstruction)}`;
-                    } else if (roundedDistance === 10) {
-                        preAlertMessage = `En 10 metros, ${getSimplifiedInstruction(currentInstruction)}`;
-                    }
+            if (threshold !== undefined) {
+                const announcementKey =
+                    `prealert_${currentInstructionIndex.current}_${threshold}`;
+                const action = getSimplifiedInstruction(currentInstruction);
+                const preAlertMessage =
+                    `A unos ${threshold} metros, ${action}.`;
 
-                    if (preAlertMessage) {
-                        speak(preAlertMessage, false);
-                        announcedDistances.current.add(announcementKey);
+                speak(preAlertMessage, false);
+                announcedDistances.current.add(announcementKey);
 
-                        // Actualizar UI con aviso anticipado
-                        dispatch({
-                            type: "SET_INSTRUCTION",
-                            payload: `Prepararse: ${preAlertMessage}`
-                        });
-                    }
-                }
+                dispatch({
+                    type: "SET_INSTRUCTION",
+                    payload: preAlertMessage
+                });
             }
         }
     }, [
@@ -224,7 +230,6 @@ export const App: React.FC = () => {
         pointsData,
         speak,
         dispatch,
-        settings.isVoiceActive,
         loadedPointsData
     ]);
 
@@ -234,6 +239,7 @@ export const App: React.FC = () => {
             currentInstructionIndex.current = 0;
             announcedPOIs.current.clear();
             announcedDistances.current.clear();
+            announcedRouteStart.current = null;
             cancel();
             dispatch({ type: 'SET_INSTRUCTION', payload: null });
         }
@@ -243,8 +249,7 @@ export const App: React.FC = () => {
         if (
             !currentRoute ||
             !navigationActive ||
-            !currentLocation ||
-            !settings.isVoiceActive
+            !currentLocation
         ) {
             return;
         }
@@ -302,7 +307,6 @@ export const App: React.FC = () => {
         currentRoute,
         navigationActive,
         currentLocation,
-        settings.isVoiceActive,
         state.buildingData,
         speak,
         dispatch
